@@ -17,7 +17,7 @@ const slides = [
 ];
 const options=[...document.querySelectorAll('.option')],scenes=[...document.querySelectorAll('.scene')];
 let current=0,timer,paused=matchMedia('(prefers-reduced-motion: reduce)').matches;
-function schedule(){clearInterval(timer);if(!paused&&!document.hidden)timer=setInterval(()=>show((current+1)%slides.length),8000)}
+function schedule(){clearInterval(timer);if(!paused&&!document.hidden)timer=setInterval(()=>show((current+1)%slides.length),matchMedia('(max-width:650px)').matches?16000:8000)}
 function show(index){
  current=index;const slide=slides[index];
  scenes.forEach((scene,i)=>scene.classList.toggle('active',i===index));
@@ -82,19 +82,6 @@ document.querySelectorAll('.comparison-range').forEach(range=>{
  });
 });
 
-const enquiryForm=document.querySelector('.contact-form');
-enquiryForm?.addEventListener('submit',event=>{
- event.preventDefault();
- const status=enquiryForm.querySelector('.form-status');
- status.hidden=false;
- try{
-  const enquiries=JSON.parse(localStorage.getItem('alfa51-enquiries')||'[]');
-  enquiries.push({...Object.fromEntries(new FormData(enquiryForm)),createdAt:new Date().toISOString()});
-  localStorage.setItem('alfa51-enquiries',JSON.stringify(enquiries));
-  status.textContent=translated("Your enquiry is saved on this device. It has not been sent online.");
-  enquiryForm.reset();
- }catch(error){status.textContent=translated("Unable to save on this device. Please keep a copy of your enquiry.");}
-});
 
 // Keep the editorial line break and fit both complete lines at every viewport size.
 function renderHeadline(markup){
@@ -141,13 +128,14 @@ function translatePage(){
  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
  let node;
  while(node=walker.nextNode()){
-  if(node.parentElement.closest('script,style,.nav-brand,.gallery-wordmark,.footer-stacked-brand,.footer-logo,.language-picker,#headline'))continue;
+  if(node.parentElement.closest('script,style,.nav-brand,.gallery-wordmark,.enquiry-chat,.footer-stacked-brand,.footer-logo,.language-picker,#headline'))continue;
   if(!originalNodes.has(node))originalNodes.set(node,node.textContent);
   const source=originalNodes.get(node),key=source.trim();
   const value=translated(key);
   if(node.textContent!==source.replace(key,value))node.textContent=source.replace(key,value);
  }
  document.querySelectorAll('[placeholder]').forEach(element=>{
+  if(element.closest('.enquiry-chat'))return;
   if(!originalAttributes.has(element))originalAttributes.set(element,element.getAttribute('placeholder'));
   element.setAttribute('placeholder',translated(originalAttributes.get(element)));
  });
@@ -167,6 +155,7 @@ function chooseLanguage(language){
  document.querySelector('.geographic-map img').src=language==='en'?'assets/southern-california-illustrated.svg':`assets/map-${language}.svg`;
  try{localStorage.setItem('alfa51-language',language)}catch{}
  closeLanguageMenu();
+ if(typeof updateEnquiryLanguage==='function')updateEnquiryLanguage();
 }
 const languageToggle=document.querySelector('.language-toggle'),languageMenu=document.querySelector('.language-menu');
 function closeLanguageMenu(){languageMenu.hidden=true;languageToggle.setAttribute('aria-expanded','false')}
@@ -215,3 +204,125 @@ function formatAreaDescription(){
 }
 new ResizeObserver(()=>{fitAreaText(document.querySelector('.southern-description'));fitAreaText(document.querySelector('#southern-title'))}).observe(document.querySelector('.southern-intro'));
 document.fonts.ready.then(formatAreaDescription);
+
+// Use compositor transforms for reliable mobile Safari photo panning.
+const heroImageSizes=new WeakMap();
+function measureMobileHero(){
+ const hero=document.querySelector('.showcase'),width=hero.clientWidth,height=hero.clientHeight;
+ scenes.forEach(scene=>{
+  const size=heroImageSizes.get(scene);
+  if(size)scene.style.setProperty('--mobile-pan-distance',`${Math.max(0,height*size.width/size.height-width)}px`);
+ });
+}
+scenes.forEach(scene=>{
+ const source=scene.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
+ if(!source)return;
+ const photo=new Image();
+ photo.onload=()=>{heroImageSizes.set(scene,{width:photo.naturalWidth,height:photo.naturalHeight});measureMobileHero()};
+ photo.src=source;
+});
+addEventListener('resize',()=>{measureMobileHero();schedule()});
+
+// Guided enquiry with separate phone and email validation.
+var enquiryChatState;
+const chatCopy={
+ en:{clear:'Clear',greeting:'Hi there! What would you like us to create or improve in your backyard?',start:'What would you love to do with your outdoor space?',project:'Tell us what you have in mind…',namePrompt:'Sounds good! What’s your name?',name:'Your name…',phonePrompt:'Thanks! What phone number can we reach you on?',phone:'Your phone number…',emailInstead:'Use email instead',emailPrompt:'Of course! What email address can we reach you at?',email:'Your email address…',optionalPrompt:'Got it! Would you like to add an email address too? This is optional—you can skip and submit.',skip:'Skip & submit',empty:'Please write a little about your project.',invalidName:'Please enter your name.',invalidPhone:'Please enter a valid phone number, including the area code. For international numbers, start with + and the country code.',invalidEmail:'Please enter a valid email address, such as name@example.com.',saveError:'We couldn’t save your enquiry. Please try again.',send:'Send',thanks:'Thank you!',done:'Our representative will get in touch with you.'},
+ es:{clear:'Borrar',greeting:'¡Hola! ¿Qué te gustaría crear o mejorar en tu jardín?',start:'¿Qué te gustaría hacer con tu espacio exterior?',project:'Cuéntanos qué tienes en mente…',namePrompt:'¡Suena bien! ¿Cómo te llamas?',name:'Tu nombre…',phonePrompt:'¡Gracias! ¿A qué teléfono podemos llamarte?',phone:'Tu número de teléfono…',emailInstead:'Usar correo electrónico',emailPrompt:'¡Claro! ¿A qué correo podemos escribirte?',email:'Tu correo electrónico…',optionalPrompt:'¡Perfecto! ¿Quieres añadir un correo? Es opcional; puedes omitirlo y enviar.',skip:'Omitir y enviar',empty:'Cuéntanos un poco sobre tu proyecto.',invalidName:'Introduce tu nombre.',invalidPhone:'Introduce un teléfono válido con el código de área. Para números internacionales, incluye + y el código de país.',invalidEmail:'Introduce un correo válido, como nombre@ejemplo.com.',saveError:'No pudimos guardar tu consulta. Inténtalo de nuevo.',send:'Enviar',thanks:'¡Gracias!',done:'Nuestro representante se pondrá en contacto contigo.'},
+ fr:{clear:'Effacer',greeting:'Bonjour ! Qu’aimeriez-vous créer ou améliorer dans votre jardin ?',start:'Qu’aimeriez-vous faire de votre espace extérieur ?',project:'Dites-nous ce que vous avez en tête…',namePrompt:'Très bien ! Comment vous appelez-vous ?',name:'Votre nom…',phonePrompt:'Merci ! À quel numéro pouvons-nous vous joindre ?',phone:'Votre numéro de téléphone…',emailInstead:'Utiliser l’e-mail',emailPrompt:'Bien sûr ! À quelle adresse e-mail pouvons-nous vous joindre ?',email:'Votre adresse e-mail…',optionalPrompt:'Merci ! Souhaitez-vous aussi ajouter un e-mail ? C’est facultatif : vous pouvez ignorer cette étape et envoyer.',skip:'Ignorer et envoyer',empty:'Décrivez brièvement votre projet.',invalidName:'Veuillez saisir votre nom.',invalidPhone:'Saisissez un numéro valide avec l’indicatif régional. Pour un numéro international, commencez par + et l’indicatif du pays.',invalidEmail:'Saisissez un e-mail valide, comme nom@exemple.com.',saveError:'Impossible d’enregistrer votre demande. Réessayez.',send:'Envoyer',thanks:'Merci !',done:'Notre représentant vous contactera prochainement.'}
+};
+function enquiryCopy(){return chatCopy[selectedLanguage]||chatCopy.en}
+function updateEnquiryLanguage(){
+ if(!enquiryChatState)return;
+ const box=document.querySelector('.enquiry-chat'),copy=enquiryCopy(),step=enquiryChatState.step;
+ box.querySelectorAll('[data-chat-copy]').forEach(node=>node.textContent=copy[node.dataset.chatCopy]);
+ const input=box.querySelector('textarea');
+ input.placeholder=copy[step==='optionalEmail'?'email':step]||copy.project;
+ input.setAttribute('aria-label',input.placeholder);
+ input.inputMode=step==='phone'?'tel':step==='email'||step==='optionalEmail'?'email':'text';
+ input.autocomplete=step==='name'?'name':step==='phone'?'tel':step==='email'||step==='optionalEmail'?'email':'off';
+ requestAnimationFrame(()=>{input.style.height='auto';input.style.height=Math.min(Math.max(input.scrollHeight,matchMedia('(max-width:650px)').matches?58:42),145)+'px'});
+ box.querySelector('.chat-send').setAttribute('aria-label',copy.send);
+ box.querySelector('.chat-clear').textContent=copy.clear;
+ box.querySelector('.chat-email-instead').textContent=copy.emailInstead;
+ box.querySelector('.chat-skip-email').textContent=copy.skip;
+ box.querySelector('.chat-options').hidden=!['phone','optionalEmail'].includes(step);
+ box.querySelector('.chat-email-instead').hidden=step!=='phone';
+ box.querySelector('.chat-skip-email').hidden=step!=='optionalEmail';
+ box.querySelector('.chat-complete h3').textContent=copy.thanks;
+ box.querySelector('.chat-complete p').textContent=copy.done;
+ const error=box.querySelector('.chat-error');if(error.dataset.error)error.textContent=copy[error.dataset.error];
+}
+const chatBox=document.querySelector('.enquiry-chat'),chatForm=chatBox.querySelector('.chat-composer'),chatInput=chatBox.querySelector('textarea'),chatLog=chatBox.querySelector('.chat-conversation'),chatError=chatBox.querySelector('.chat-error');
+function freshEnquiry(){return {step:'project',project:'',name:'',phone:'',email:'',preferredContact:'phone'}}
+enquiryChatState=freshEnquiry();
+function addChatMessage(text,kind,key){
+ const bubble=document.createElement('p');bubble.className='chat-message '+kind;
+ if(key)bubble.dataset.chatCopy=key;
+ bubble.textContent=text;chatLog.append(bubble);chatLog.scrollTop=chatLog.scrollHeight;
+}
+function chatValidationError(key){chatError.hidden=false;chatError.dataset.error=key;chatError.textContent=enquiryCopy()[key];chatInput.setAttribute('aria-invalid','true');chatInput.focus({preventScroll:true})}
+function clearChatError(){chatError.hidden=true;delete chatError.dataset.error;chatInput.removeAttribute('aria-invalid')}
+function isValidPhone(value){
+ if(!/^\+?[\d\s().-]+$/.test(value))return false;
+ const digits=value.replace(/\D/g,'');
+ if(/^(\d)\1+$/.test(digits))return false;
+ if(value.trim().startsWith('+')&&!digits.startsWith('1'))return digits.length>=8&&digits.length<=15&&!digits.startsWith('0');
+ const national=digits.length===11&&digits.startsWith('1')?digits.slice(1):digits;
+ return /^[2-9]\d{2}[2-9]\d{6}$/.test(national);
+}
+function isValidEmail(value){return /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+$/i.test(value)&&value.length<=254}
+function completeEnquiry(){
+ try{
+  const saved=JSON.parse(localStorage.getItem('alfa51-enquiries')||'[]');
+  saved.push({message:enquiryChatState.project,name:enquiryChatState.name,email:enquiryChatState.email,phone:enquiryChatState.phone,preferredContact:enquiryChatState.preferredContact,language:selectedLanguage,createdAt:new Date().toISOString()});
+  localStorage.setItem('alfa51-enquiries',JSON.stringify(saved));
+ }catch{chatValidationError('saveError');return false}
+ chatForm.hidden=true;chatLog.hidden=true;chatError.hidden=true;chatBox.querySelector('.chat-clear').hidden=true;chatBox.querySelector('.chat-options').hidden=true;
+ chatBox.querySelector('.chat-complete').hidden=false;enquiryChatState.step='complete';chatInput.value='';return true;
+}
+function nextChatStep(){chatInput.value='';chatInput.style.height='auto';clearChatError();updateEnquiryLanguage();chatInput.focus();chatLog.scrollTop=chatLog.scrollHeight}
+addChatMessage(enquiryCopy().start,'assistant','start');updateEnquiryLanguage();
+chatInput.addEventListener('input',()=>{chatInput.style.height='auto';chatInput.style.height=Math.min(chatInput.scrollHeight,145)+'px';clearChatError()});
+chatInput.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&matchMedia('(pointer:fine)').matches){event.preventDefault();chatForm.requestSubmit()}});
+function isGreetingOnly(value){
+ const normalized=value.toLocaleLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
+ if(!normalized)return false;
+ const remainder=normalized.replace(/\b(good morning|good afternoon|good evening|how are you|how are you doing|how s it going|what s up|buenos días|buenas tardes|buenas noches|cómo estás|como estas|qué tal|que tal|comment allez vous|comment ça va|comment ca va|salut|bonjour|bonsoir|coucou|hola|buenas|hello|hiya|howdy|heya|hey|hi|greetings|there|everyone|team|guys|sir|madam)\b/giu,'').trim();
+ return !remainder;
+}
+chatForm.addEventListener('submit',event=>{
+ event.preventDefault();const value=chatInput.value.trim(),step=enquiryChatState.step;
+ if(!value)return chatValidationError(step==='project'?'empty':step==='name'?'invalidName':step==='phone'?'invalidPhone':'invalidEmail');
+ if(step==='name'&&(value.length<2||!/[\p{L}]/u.test(value)))return chatValidationError('invalidName');
+ if(step==='phone'&&!isValidPhone(value))return chatValidationError('invalidPhone');
+ if((step==='email'||step==='optionalEmail')&&!isValidEmail(value))return chatValidationError('invalidEmail');
+ chatBox.closest('.glass-footer').classList.add('chat-started');chatBox.querySelector('.chat-clear').hidden=false;
+ chatLog.querySelector('[data-chat-copy="start"]')?.remove();
+ if(step==='email'||step==='optionalEmail'){enquiryChatState.email=value;completeEnquiry();return}
+ addChatMessage(value,'visitor');
+ if(step==='project'){
+  if(isGreetingOnly(value)){addChatMessage(enquiryCopy().greeting,'assistant','greeting');nextChatStep();return}
+  enquiryChatState.project=value;enquiryChatState.step='name';addChatMessage(enquiryCopy().namePrompt,'assistant','namePrompt');
+ }else if(step==='name'){
+  enquiryChatState.name=value;enquiryChatState.step='phone';addChatMessage(enquiryCopy().phonePrompt,'assistant','phonePrompt');
+ }else if(step==='phone'){
+  enquiryChatState.phone=value;enquiryChatState.step='optionalEmail';addChatMessage(enquiryCopy().optionalPrompt,'assistant','optionalPrompt');
+ }
+ nextChatStep();
+});
+chatBox.querySelector('.chat-email-instead').addEventListener('click',()=>{
+ if(enquiryChatState.step!=='phone')return;
+ enquiryChatState.step='email';enquiryChatState.preferredContact='email';
+ addChatMessage(enquiryCopy().emailInstead,'visitor','emailInstead');addChatMessage(enquiryCopy().emailPrompt,'assistant','emailPrompt');nextChatStep();
+});
+chatBox.querySelector('.chat-skip-email').addEventListener('click',()=>{
+ if(enquiryChatState.step!=='optionalEmail')return;
+ enquiryChatState.email='';completeEnquiry();
+});
+chatBox.querySelector('.chat-clear').addEventListener('click',()=>{
+ const draft=enquiryChatState.project||chatLog.querySelector('.chat-message.visitor')?.textContent||'';
+ enquiryChatState=freshEnquiry();chatLog.replaceChildren();addChatMessage(enquiryCopy().start,'assistant','start');
+ chatForm.hidden=false;chatLog.hidden=false;clearChatError();chatBox.querySelector('.chat-complete').hidden=true;chatBox.querySelector('.chat-clear').hidden=true;
+ chatBox.closest('.glass-footer').classList.remove('chat-started');chatInput.value=draft;
+ updateEnquiryLanguage();chatInput.focus();chatInput.setSelectionRange(draft.length,draft.length);
+});
