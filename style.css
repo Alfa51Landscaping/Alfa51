@@ -748,3 +748,26 @@ html[lang=fa] :is(h1,h2,h3,.chat-message),html[lang=ar] :is(h1,h2,h3,.chat-messa
 
 /* A single visible-page clock drives mobile panning and slide changes. */
 @media(max-width:650px){.showcase .scene.active{animation:none}.showcase .scene:nth-child(n){transition:opacity 1.2s ease;transform:translate3d(0,0,0)}}
+/* Keep starter rows from squeezing the opening question on small screens. */
+.enquiry-chat .chat-suggestions button{min-height:30px}
+.enquiry-chat .chat-suggestions button span{margin:0}
+.glass-footer:not(.chat-started) .chat-conversation{flex:0 0 auto;overflow:visible}
+@media(max-width:650px){
+ .glass-footer .enquiry-chat,.glass-footer.chat-started .enquiry-chat{height:430px;min-height:430px;max-height:430px;display:flex;gap:0}
+ .glass-footer:not(.chat-started) .enquiry-chat{justify-content:center}
+ .enquiry-chat .chat-message.assistant[data-chat-copy="start"]{font-size:20px;line-height:1.4;margin:0 auto 18px;max-width:100%;text-align:center}
+ .enquiry-chat .chat-conversation{padding-bottom:0}
+ .enquiry-chat .chat-composer{flex:0 0 auto;margin:0}
+ .enquiry-chat .chat-suggestions{margin:12px 0 0;gap:2px}
+ .enquiry-chat .chat-suggestions button{min-height:30px;padding:5px 4px;gap:10px;font-size:11px;line-height:1.45}
+ .enquiry-chat .chat-suggestions .suggestion-icon{font-size:17px;flex-basis:18px;width:18px}
+ .enquiry-chat .chat-suggestions button>span:last-child{white-space:normal;overflow:visible}
+ .glass-footer.chat-started .chat-conversation{flex:1 1 0;overflow-y:auto;padding-bottom:16px}
+}
+/* Dashed chat scroll indicator, matching the supplied reference. */
+.enquiry-chat .chat-conversation{scrollbar-width:none;-ms-overflow-style:none;padding-inline-end:16px;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
+.enquiry-chat .chat-conversation::-webkit-scrollbar{display:none;width:0;height:0}
+.enquiry-chat .chat-scroll-rail{position:absolute;right:0;width:8px;pointer-events:none;z-index:2;background:transparent}
+.enquiry-chat .chat-scroll-rail[hidden]{display:none!important}
+.chat-scroll-thumb{position:absolute;inset:0 1px auto;width:6px;min-height:30px;background:repeating-linear-gradient(to bottom,#cbb7a16b 0 2px,transparent 2px 10px);border:0;border-radius:0;will-change:transform}
+html[dir=rtl] .chat-scroll-rail{right:auto;left:0}

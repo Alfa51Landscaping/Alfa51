@@ -1,4 +1,4 @@
-(()=>{const screen=document.querySelector('.access-screen'),form=screen.querySelector('form'),input=screen.querySelector('input'),error=screen.querySelector('p');form.addEventListener('submit',event=>{event.preventDefault();if(input.value==='9628'){document.documentElement.classList.remove('site-locked');screen.remove();}else{error.textContent='Incorrect password. Please try again.';input.setAttribute('aria-invalid','true');input.focus({preventScroll:true});input.select();}});input.addEventListener('input',()=>{error.textContent='';input.removeAttribute('aria-invalid');});})();
+(()=>{const screen=document.querySelector('.access-screen'),form=screen.querySelector('form'),input=screen.querySelector('input'),error=screen.querySelector('p');form.addEventListener('submit',event=>{event.preventDefault();if(input.value==='9628'){document.documentElement.classList.remove('site-locked');const content=document.getElementById('site-content');if(content){content.removeAttribute('inert');content.style.removeProperty('visibility');}screen.remove();dispatchEvent(new Event('resize'));}else{error.textContent='Incorrect password. Please try again.';input.setAttribute('aria-invalid','true');input.focus({preventScroll:true});input.select();}});input.addEventListener('input',()=>{error.textContent='';input.removeAttribute('aria-invalid');});})();
 const slides = [
   {
     "headline": "A backyard made<br>for getting together."
@@ -363,3 +363,22 @@ chatBox.querySelector('.chat-clear').addEventListener('click',()=>{
 var projectIdeas={en:['Create a backyard BBQ area','Redesign my garden','Add pavers and a patio','Make a family-friendly backyard'],es:['Crear una zona de barbacoa','Rediseñar mi jardín','Añadir adoquines y un patio','Un jardín para toda la familia'],fr:['Créer un espace barbecue','Réaménager mon jardin','Ajouter des pavés et une terrasse','Un jardin pour toute la famille'],fa:['ساخت فضای باربیکیو','طراحی دوباره باغ','سنگ‌فرش و پاسیو','حیاط مناسب خانواده'],ar:['إنشاء منطقة للشواء','إعادة تصميم حديقتي','إضافة رصف وجلسة خارجية','فناء مناسب للعائلة'],ru:['Зона барбекю во дворе','Обновить мой сад','Добавить мощение и патио','Уютный двор для семьи'],uk:['Зона барбекю у дворі','Оновити мій сад','Додати мощення й патіо','Затишний двір для родини']};
 function renderProjectIdeas(){const box=document.querySelector('.chat-suggestions');box.replaceChildren(...(projectIdeas[selectedLanguage]||projectIdeas.en).map((text,index)=>{const button=document.createElement('button');button.type='button';const icon=document.createElement('span');icon.className='suggestion-icon';icon.setAttribute('aria-hidden','true');icon.textContent=['♨','❀','▦','⌂'][index];const label=document.createElement('span');label.textContent=text;button.append(icon,label);button.addEventListener('click',()=>{chatInput.value=text;chatInput.dispatchEvent(new Event('input'));chatInput.focus({preventScroll:true});});return button;}));}
 renderProjectIdeas();
+
+// A quiet dashed indicator; native touch and wheel scrolling stay on the log.
+const chatScrollRail=document.createElement('div');
+chatScrollRail.className='chat-scroll-rail';chatScrollRail.setAttribute('aria-hidden','true');
+const chatScrollThumb=document.createElement('div');chatScrollThumb.className='chat-scroll-thumb';
+chatScrollRail.append(chatScrollThumb);chatBox.append(chatScrollRail);
+function updateChatScrollIndicator(){
+ const visible=chatLog.clientHeight,total=chatLog.scrollHeight,overflow=total-visible;
+ chatScrollRail.hidden=overflow<2||chatLog.hidden||!chatBox.closest('.chat-started');
+ if(chatScrollRail.hidden)return;
+ chatScrollRail.style.top=chatLog.offsetTop+'px';chatScrollRail.style.height=visible+'px';
+ const thumbHeight=Math.min(visible,Math.max(30,visible*visible/total));
+ chatScrollThumb.style.height=thumbHeight+'px';
+ chatScrollThumb.style.transform=`translateY(${(visible-thumbHeight)*chatLog.scrollTop/overflow}px)`;
+}
+chatLog.addEventListener('scroll',updateChatScrollIndicator,{passive:true});
+new ResizeObserver(updateChatScrollIndicator).observe(chatLog);
+new MutationObserver(()=>requestAnimationFrame(updateChatScrollIndicator)).observe(chatBox,{childList:true,subtree:true});
+updateChatScrollIndicator();
