@@ -10,16 +10,14 @@ function loadHeroPhoto(source){
 (()=>{
  const screen=document.querySelector('.access-screen'),form=screen.querySelector('form'),input=screen.querySelector('input'),error=screen.querySelector('p'),button=form.querySelector('button');
  const accessKey='alfa51-preview-unlocked-v1';let opening=false;
- function firstHeroReady(){return loadHeroPhoto('assets/bbq.webp')}
- async function unlock(){
-  if(opening)return;opening=true;button.disabled=true;button.textContent='Loading…';error.textContent='Loading your outdoor inspiration…';
+ function unlock(){
+  if(opening)return;opening=true;
   try{
-   await firstHeroReady();
    try{sessionStorage.setItem(accessKey,'yes')}catch{}
    const content=document.getElementById('site-content');if(content){content.removeAttribute('inert');content.style.removeProperty('visibility');}
    document.documentElement.classList.remove('site-locked');screen.remove();
    requestAnimationFrame(()=>{dispatchEvent(new Event('resize'));dispatchEvent(new Event('focus'));});
-  }catch{opening=false;button.disabled=false;button.textContent='Try again';error.textContent='The photo could not load. Check your connection and try again.';}
+  }catch{opening=false;button.disabled=false;button.textContent='Unlock';error.textContent='Please try again.';}
  }
  form.addEventListener('submit',event=>{event.preventDefault();if(input.value==='9628')unlock();else{error.textContent='Incorrect password. Please try again.';input.setAttribute('aria-invalid','true');input.focus({preventScroll:true});input.select();}});
  input.addEventListener('input',()=>{error.textContent='';input.removeAttribute('aria-invalid');});
