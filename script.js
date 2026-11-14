@@ -1,7 +1,16 @@
+// Share decoded image requests between the access screen and slideshow.
+const heroPhotoLoads=new Map(),heroPhotosReady=new Set();
+function loadHeroPhoto(source){
+ if(!heroPhotoLoads.has(source))heroPhotoLoads.set(source,new Promise((resolve,reject)=>{
+  const image=new Image();image.fetchPriority=source.includes('bbq.webp')?'high':'auto';
+  image.onload=async()=>{try{if(image.decode)await image.decode();heroPhotosReady.add(source);resolve(image)}catch(error){heroPhotoLoads.delete(source);reject(error)}};
+  image.onerror=()=>{heroPhotoLoads.delete(source);reject(new Error('Image unavailable'))};image.src=source;
+ }));return heroPhotoLoads.get(source);
+}
 (()=>{
  const screen=document.querySelector('.access-screen'),form=screen.querySelector('form'),input=screen.querySelector('input'),error=screen.querySelector('p'),button=form.querySelector('button');
  const accessKey='alfa51-preview-unlocked-v1';let opening=false;
- function firstHeroReady(){return new Promise((resolve,reject)=>{const image=new Image();image.fetchPriority='high';image.onload=()=>{if(image.decode)image.decode().catch(()=>{}).then(resolve);else resolve()};image.onerror=()=>reject(new Error('image'));image.src='assets/bbq.webp';if(image.complete&&image.naturalWidth)resolve();});}
+ function firstHeroReady(){return loadHeroPhoto('assets/bbq.webp')}
  async function unlock(){
   if(opening)return;opening=true;button.disabled=true;button.textContent='Loading…';error.textContent='Loading your outdoor inspiration…';
   try{
@@ -36,6 +45,7 @@ const slides = [
 const options=[...document.querySelectorAll('.option')],scenes=[...document.querySelectorAll('.scene')];
 const heroMotionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 const heroMobile=matchMedia('(max-width:650px)');
+let pendingHeroIndex=null;
 let current=0,paused=heroMotionPreference.matches,heroElapsed=0,heroLastFrame=0,heroFrameId=0;
 function schedule(){if(!heroFrameId)heroFrameId=requestAnimationFrame(animateHero)}
 function animateHero(now){
@@ -53,6 +63,12 @@ function animateHero(now){
  heroLastFrame=now;schedule();
 }
 function show(index){
+ const source=scenes[index].dataset.photo;
+ if(source&&!heroPhotosReady.has(source)){
+  if(pendingHeroIndex!==index){pendingHeroIndex=index;loadHeroPhoto(source).then(()=>{if(pendingHeroIndex===index)show(index)}).catch(()=>{pendingHeroIndex=null;heroElapsed=0});}
+  return;
+ }
+ pendingHeroIndex=null;
  current=index;heroElapsed=0;heroLastFrame=0;const slide=slides[index];
  scenes.forEach(scene=>scene.style.removeProperty('transform'));
  scenes.forEach((scene,i)=>scene.classList.toggle('active',i===index));
@@ -88,6 +104,7 @@ document.querySelectorAll('.photo-carousel').forEach(carousel=>{
    groups.forEach(group=>group.insertAdjacentHTML('beforeend',originals));
   }
   width=groups[0].getBoundingClientRect().width;render();
+  if(belowHeroPhotos)observeDeferredPhotos();
  }
  new ResizeObserver(measure).observe(carousel);
  function frame(time){
@@ -261,13 +278,26 @@ function measureMobileHero(){
   if(size)scene.style.setProperty('--mobile-pan-distance',`${Math.max(0,height*size.width/size.height-width)}px`);
  });
 }
-scenes.forEach(scene=>{
- const source=scene.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
- if(!source)return;
- const photo=new Image();
- photo.onload=()=>{heroImageSizes.set(scene,{width:photo.naturalWidth,height:photo.naturalHeight});measureMobileHero()};
- photo.src=source;
-});
+scenes.forEach(scene=>{scene.dataset.photo=scene.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1]||''});
+async function prepareHeroPhotos(){
+ for(const [index,scene] of scenes.entries()){
+  const source=scene.dataset.photo;if(!source)continue;
+  try{const photo=await loadHeroPhoto(source);heroImageSizes.set(scene,{width:photo.naturalWidth,height:photo.naturalHeight});
+   const thumbnail=options[index].querySelector('img');if(thumbnail.dataset.src){thumbnail.src=thumbnail.dataset.src;delete thumbnail.dataset.src;}
+   measureMobileHero();
+  }catch{}
+ }
+}
+prepareHeroPhotos();
+// Lower sections start fetching shortly before they are scrolled into view.
+var belowHeroPhotos=new IntersectionObserver(entries=>{
+ for(const entry of entries)if(entry.isIntersecting){const image=entry.target;image.src=image.dataset.src;delete image.dataset.src;belowHeroPhotos.unobserve(image)}
+},{rootMargin:'800px 0px'});
+function observeDeferredPhotos(){document.querySelectorAll('img[data-src]:not(.option img)').forEach(image=>belowHeroPhotos.observe(image));}
+if(document.documentElement.classList.contains('site-locked')){
+ const unlockObserver=new MutationObserver(()=>{if(!document.documentElement.classList.contains('site-locked')){observeDeferredPhotos();unlockObserver.disconnect();}});
+ unlockObserver.observe(document.documentElement,{attributes:true,attributeFilter:['class']});
+}else observeDeferredPhotos();
 addEventListener('resize',measureMobileHero);
 new ResizeObserver(measureMobileHero).observe(document.querySelector('.showcase'));
 measureMobileHero();
