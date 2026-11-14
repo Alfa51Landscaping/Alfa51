@@ -1,4 +1,21 @@
-(()=>{const screen=document.querySelector('.access-screen'),form=screen.querySelector('form'),input=screen.querySelector('input'),error=screen.querySelector('p');form.addEventListener('submit',event=>{event.preventDefault();if(input.value==='9628'){document.documentElement.classList.remove('site-locked');const content=document.getElementById('site-content');if(content){content.removeAttribute('inert');content.style.removeProperty('visibility');}screen.remove();dispatchEvent(new Event('resize'));}else{error.textContent='Incorrect password. Please try again.';input.setAttribute('aria-invalid','true');input.focus({preventScroll:true});input.select();}});input.addEventListener('input',()=>{error.textContent='';input.removeAttribute('aria-invalid');});})();
+(()=>{
+ const screen=document.querySelector('.access-screen'),form=screen.querySelector('form'),input=screen.querySelector('input'),error=screen.querySelector('p'),button=form.querySelector('button');
+ const accessKey='alfa51-preview-unlocked-v1';let opening=false;
+ function firstHeroReady(){return new Promise((resolve,reject)=>{const image=new Image();image.fetchPriority='high';image.onload=()=>{if(image.decode)image.decode().catch(()=>{}).then(resolve);else resolve()};image.onerror=()=>reject(new Error('image'));image.src='assets/bbq.webp';if(image.complete&&image.naturalWidth)resolve();});}
+ async function unlock(){
+  if(opening)return;opening=true;button.disabled=true;button.textContent='Loading…';error.textContent='Loading your outdoor inspiration…';
+  try{
+   await firstHeroReady();
+   try{sessionStorage.setItem(accessKey,'yes')}catch{}
+   const content=document.getElementById('site-content');if(content){content.removeAttribute('inert');content.style.removeProperty('visibility');}
+   document.documentElement.classList.remove('site-locked');screen.remove();
+   requestAnimationFrame(()=>{dispatchEvent(new Event('resize'));dispatchEvent(new Event('focus'));});
+  }catch{opening=false;button.disabled=false;button.textContent='Try again';error.textContent='The photo could not load. Check your connection and try again.';}
+ }
+ form.addEventListener('submit',event=>{event.preventDefault();if(input.value==='9628')unlock();else{error.textContent='Incorrect password. Please try again.';input.setAttribute('aria-invalid','true');input.focus({preventScroll:true});input.select();}});
+ input.addEventListener('input',()=>{error.textContent='';input.removeAttribute('aria-invalid');});
+ try{if(sessionStorage.getItem(accessKey)==='yes'){input.required=false;input.value='9628';unlock();}}catch{}
+})();
 const slides = [
   {
     "headline": "A backyard made<br>for getting together."
