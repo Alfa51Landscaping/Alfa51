@@ -729,3 +729,22 @@ html[data-language=hi] .footer-brand-message,html[data-language=pa] .footer-bran
 .enquiry-chat .chat-error[hidden]{display:block!important;visibility:hidden}
 .enquiry-chat .chat-conversation{padding-bottom:16px}
 @media(max-width:650px){.enquiry-chat .chat-error{height:54px;min-height:54px;max-height:54px;flex-basis:54px;font-size:11px}}
+/* Private preview access. This is a client-side gate, not server authentication. */
+.site-locked{overflow:hidden}.site-locked body>*:not(.access-screen):not(script){visibility:hidden}
+.access-screen{position:fixed;inset:0;z-index:2147483647;background:#faf9f7;display:grid;place-items:center;color:#2b1b14;direction:ltr}
+.access-form{width:min(300px,calc(100vw - 48px));display:grid;gap:16px;text-align:center;font:16px/1.4 Arial,sans-serif}.access-form input{width:100%;box-sizing:border-box;padding:14px;border:1px solid #ccc;border-radius:10px;font:24px Arial;text-align:center;letter-spacing:12px}.access-form button{padding:13px;border:0;border-radius:10px;background:#2b1b14;color:#fff;font:16px Arial;cursor:pointer}.access-form p{min-height:38px;margin:0;color:#a32d26;font-size:13px}
+.language-menu{max-height:70svh;overflow-y:auto}
+.chat-suggestions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px;flex:0 0 auto}.chat-suggestions button{background:transparent;color:#e5cbb7;border:1px solid #efd2bc40;border-radius:14px;padding:7px 11px;font:11px/1.4 Montserrat,Arial,sans-serif;cursor:pointer}.chat-suggestions button:hover{background:#efd2bc15;border-color:#efd2bc90}.chat-started .chat-suggestions{display:none}
+html[lang=fa] :is(h1,h2,h3,.chat-message),html[lang=ar] :is(h1,h2,h3,.chat-message){font-family:Tahoma,Arial,sans-serif;letter-spacing:normal}html[dir=rtl] :is(.nav-brand,.gallery-wordmark,.footer-contact-links){direction:ltr}html[dir=rtl] .chat-composer{direction:rtl}html[dir=rtl] .chat-message.visitor{align-self:flex-start}html[dir=rtl] .geographic-map{direction:ltr}
+
+/* Project starters: quiet list rows beneath the composer. */
+.enquiry-chat .chat-suggestions{display:flex;flex-direction:column;align-items:stretch;gap:2px;margin:18px 8px 0;padding:0;min-height:0}
+.enquiry-chat .chat-suggestions button{display:flex;align-items:center;gap:12px;width:100%;min-width:0;padding:6px 10px;border:0;border-radius:7px;background:transparent;color:#cebfb0a6;text-align:start;font:400 12px/1.45 Montserrat,Arial,sans-serif;box-shadow:none}
+.enquiry-chat .chat-suggestions button:hover{background:#efd2bc09;color:#f0d7c4;border:0}
+.chat-suggestions .suggestion-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 19px;width:19px;font:20px/1 Georgia,serif;color:#cbaa8c}
+.enquiry-chat .chat-suggestions button>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-started .enquiry-chat .chat-suggestions{display:none}
+@media(max-width:650px){.enquiry-chat .chat-suggestions{margin:14px 0 0}.enquiry-chat .chat-suggestions button{font-size:11px;padding:6px 4px;gap:10px}}
+
+/* A single visible-page clock drives mobile panning and slide changes. */
+@media(max-width:650px){.showcase .scene.active{animation:none}.showcase .scene:nth-child(n){transition:opacity 1.2s ease;transform:translate3d(0,0,0)}}
